@@ -1,197 +1,821 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Porimap — Price Calculator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>错觉 · 物理幻境</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <style>
-  :root{
-    --bg:#FAFAF8; --card:#FFFFFF; --ink:#161816; --muted:#8A918D;
-    --line:#E2E4DE; --accent:#0f6a54; --field:#EDEFEA;
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500&family=Orbitron:wght@400;600&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #030308;
+    overflow: hidden;
+    font-family: 'Noto Serif SC', serif;
+    color: #e8e6e3;
+    position: fixed;
+    -webkit-user-select: none;
+    user-select: none;
   }
-  .dark{
-    --bg:#0B0D0C; --card:#111413; --ink:#EDEEEC; --muted:#7C857F;
-    --line:#1E2321; --accent:#2BA884; --field:#151918;
+  
+  #gameCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    display: block;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{-webkit-text-size-adjust:100%}
-  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;
-    background:var(--bg);color:var(--ink);min-height:100vh;
-    -webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
-  header{border-bottom:1px solid var(--line)}
-  .bar{max-width:520px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between}
-  .brand{display:flex;align-items:center;gap:12px;min-width:0}
-  .mark{flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--accent)}
-  .brand b{font-size:17px;font-weight:600;letter-spacing:-.02em}
-  .brand small{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:.02em}
-  #themeBtn{flex-shrink:0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
-    background:transparent;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
-  #themeBtn:active{transform:scale(.94)}
-  main{max-width:520px;margin:0 auto;padding:32px 24px 56px;display:grid;gap:36px}
-  main > *{min-width:0}
-  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted);margin-bottom:14px}
-  .field{min-width:0;background:var(--field);border:1px solid var(--line);border-radius:16px;
-    padding:6px 18px;display:flex;align-items:baseline;gap:10px;transition:border-color .2s}
-  .field:focus-within{border-color:var(--accent);background:var(--card)}
-  .field .unit{font-size:13px;color:var(--muted);flex-shrink:0}
-  input{flex:1;min-width:0;max-width:100%;border:none;background:transparent;color:var(--ink);
-    font-size:30px;font-weight:300;letter-spacing:-.02em;padding:12px 0;outline:none;font-variant-numeric:tabular-nums}
-  input::placeholder{color:var(--muted);opacity:.55}
-  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  input[type=number]{-moz-appearance:textfield;appearance:textfield}
-  .gap{height:18px}
-  #calcBtn{width:100%;margin-top:26px;padding:17px;border:none;border-radius:16px;background:var(--ink);color:var(--bg);
-    font-size:16px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:opacity .2s,transform .1s}
-  #calcBtn:active{transform:scale(.985);opacity:.88}
-  #result{display:none;padding-top:30px;margin-top:30px;border-top:1px solid var(--line)}
-  #result.show{display:block;animation:rise .35s cubic-bezier(.2,.7,.3,1)}
-  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  #priceBig{font-size:clamp(44px,14vw,64px);font-weight:200;letter-spacing:-.04em;
-    font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.05}
-  #priceBig small{font-size:.5em;font-weight:300;color:var(--muted)}
-  #breakdown{margin-top:10px;font-size:13.5px;color:var(--muted);line-height:1.6}
-  #formula{margin-top:16px;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
-  .rowBtns{display:flex;gap:0;margin-top:20px;border-top:1px solid var(--line)}
-  .ghost{flex:1;padding:14px 0;border:none;border-bottom:1px solid var(--line);background:transparent;
-    color:var(--ink);font-size:14px;font-weight:500;cursor:pointer}
-  .ghost + .ghost{border-left:1px solid var(--line)}
-  .ghost:active{opacity:.55}
-  .hist-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px}
-  .hist-head h2{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
-  #histCount{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-  #hist{list-style:none}
-  #hist li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;
-    padding:13px 2px;border-bottom:1px solid var(--line);font-size:14.5px;min-width:0}
-  #hist li span{color:var(--muted);font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
-  #hist li b{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .empty{color:var(--muted);font-size:14px;padding:16px 2px;border-bottom:1px solid var(--line)}
-  footer{text-align:center;font-size:11.5px;letter-spacing:.08em;color:var(--muted);padding-bottom:8px}
-  #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);max-width:90vw;text-align:center;
-    background:var(--ink);color:var(--bg);padding:12px 24px;border-radius:99px;font-size:13.5px;font-weight:500;
-    display:none;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  
+  #ui {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  /* 横屏提示 */
+  #orientTip {
+    position: fixed;
+    inset: 0;
+    background: #030308;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+  #orientTip.show { display: flex; }
+  #orientTip h2 {
+    font-size: 1.6rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 30px rgba(140,180,255,0.5);
+  }
+  #orientTip p {
+    opacity: 0.6;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+  }
+  .rotate-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    animation: rotateHint 2.5s ease-in-out infinite;
+  }
+  @keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
+  
+  /* 电影级标题 */
+  .cinematic-title {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    opacity: 0;
+    transition: opacity 1.6s ease;
+    pointer-events: none;
+    width: 90%;
+  }
+  .cinematic-title.show { opacity: 1; }
+  .cinematic-title h1 {
+    font-size: clamp(1.6rem, 5.5vw, 3.2rem);
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 35px rgba(180,220,255,0.55);
+    margin-bottom: 0.5em;
+  }
+  .cinematic-title .eng {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(0.55rem, 1.8vw, 0.75rem);
+    letter-spacing: 0.5em;
+    color: #8ab4f8;
+    opacity: 0.7;
+    margin-bottom: 1.8em;
+  }
+  .cinematic-title .sub {
+    font-size: clamp(0.85rem, 2.5vw, 1.05rem);
+    opacity: 0.75;
+    letter-spacing: 0.06em;
+    line-height: 1.7;
+  }
+  .cinematic-title .sub-en {
+    font-size: clamp(0.65rem, 1.8vw, 0.8rem);
+    opacity: 0.4;
+    margin-top: 0.5em;
+  }
+  
+  .core-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px; height: 10px;
+    background: #7ec8ff;
+    border-radius: 50%;
+    box-shadow: 0 0 18px 6px rgba(100,180,255,0.75), 0 0 50px 16px rgba(60,120,255,0.25);
+    opacity: 0;
+    transition: opacity 1.4s;
+  }
+  .core-glow.show { opacity: 1; }
+  
+  /* HUD */
+  .hud {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+    font-size: clamp(0.75rem, 2.2vw, 0.9rem);
+    opacity: 0.75;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+  }
+  .hud span { color: #8ab4f8; }
+  
+  /* 虚拟摇杆 */
+  #joystickZone {
+    position: absolute;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: max(16px, env(safe-area-inset-left));
+    width: 140px; height: 140px;
+    pointer-events: auto;
+    z-index: 15;
+  }
+  #joystickBase {
+    position: absolute;
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(180,220,255,0.25);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  #joystickStick {
+    position: absolute;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(180,220,255,0.35);
+    border: 2px solid rgba(180,220,255,0.7);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    transition: background 0.15s;
+  }
+  
+  /* 右侧按钮 */
+  #btnZone {
+    position: absolute;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    right: max(16px, env(safe-area-inset-right));
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    pointer-events: auto;
+    z-index: 15;
+  }
+  .action-btn {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(180,220,255,0.3);
+    color: #c8e0ff;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    user-select: none;
+  }
+  .action-btn:active, .action-btn.active {
+    background: rgba(140,180,255,0.25);
+    border-color: rgba(180,220,255,0.7);
+  }
+  #skillBtn {
+    width: 56px; height: 56px;
+    font-size: 0.7rem;
+    opacity: 0.85;
+  }
+  
+  /* 升级面板 */
+  .upgrade-panel {
+    position: absolute;
+    inset: 0;
+    background: rgba(3,3,8,0.94);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    pointer-events: auto;
+    z-index: 30;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+  .upgrade-panel.show { display: flex; }
+  .upgrade-card {
+    width: min(380px, 92vw);
+    padding: 1.3rem 1.5rem;
+    border: 1px solid rgba(140,180,255,0.25);
+    border-radius: 10px;
+    background: rgba(20,25,40,0.7);
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .upgrade-card:active {
+    border-color: rgba(160,200,255,0.7);
+    background: rgba(30,40,60,0.9);
+  }
+  .upgrade-card h3 {
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin-bottom: 0.35em;
+    color: #b8d4ff;
+  }
+  .upgrade-card p {
+    font-size: 0.82rem;
+    opacity: 0.65;
+    line-height: 1.45;
+  }
+  
+  .fade {
+    position: fixed;
+    inset: 0;
+    background: #030308;
+    z-index: 50;
+    opacity: 1;
+    transition: opacity 1s ease;
+    pointer-events: none;
+  }
+  .fade.hide { opacity: 0; }
 </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <div class="brand"><div class="mark"></div><div><b>Porimap</b><small>পরিমাপ · measure the price</small></div></div>
-    <button id="themeBtn" title="Toggle theme" aria-label="Toggle theme"></button>
+<canvas id="gameCanvas"></canvas>
+
+<!-- 横屏提示 -->
+<div id="orientTip">
+  <div class="rotate-icon">📱</div>
+  <h2>请旋转手机横屏游玩</h2>
+  <p>本游戏专为横屏设计</p>
+</div>
+
+<div id="ui">
+  <div class="hud" id="hud">
+    生命 <span id="hp">100</span><br>
+    知识 <span id="frag">0</span> · 房间 <span id="room">1</span>
   </div>
-</header>
-
-<main>
-  <section>
-    <p class="eyebrow">RATE — PER KILOGRAM</p>
-    <div class="field"><span class="unit">৳</span><input id="rate" type="number" min="0" step="any" inputmode="decimal" placeholder="0" /></div>
-    <div class="gap"></div>
-    <p class="eyebrow">WEIGHT — GRAMS</p>
-    <div class="field"><input id="weight" type="number" min="0" step="any" inputmode="decimal" placeholder="0" /><span class="unit">g</span></div>
-    <button id="calcBtn">Calculate</button>
-
-    <div id="result">
-      <p class="eyebrow">TOTAL</p>
-      <p id="priceBig"></p>
-      <p id="breakdown"></p>
-      <p id="formula"></p>
-      <div class="rowBtns">
-        <button class="ghost" id="copyBtn">Copy</button>
-        <button class="ghost" id="clearBtn">Clear</button>
-      </div>
+  
+  <!-- 虚拟摇杆 -->
+  <div id="joystickZone">
+    <div id="joystickBase">
+      <div id="joystickStick"></div>
     </div>
-  </section>
-
-  <section>
-    <div class="hist-head"><h2>RECENT</h2><span id="histCount"></span></div>
-    <ul id="hist"></ul>
-  </section>
-
-  <footer>PORIMAP · WEIGH · PRICE · REPEAT</footer>
-</main>
-
-<div id="toast"></div>
+  </div>
+  
+  <!-- 操作按钮 -->
+  <div id="btnZone">
+    <div class="action-btn" id="skillBtn">技能</div>
+    <div class="action-btn" id="shootBtn">射击</div>
+  </div>
+  
+  <div class="cinematic-title" id="cineTitle">
+    <h1 id="cineH1">错觉 · 大脑在骗你</h1>
+    <div class="eng" id="cineEng">ILLUSIONS</div>
+    <div class="sub" id="cineSub">你看到的，是大脑想让你看到的。</div>
+    <div class="sub-en" id="cineSubEn">What you see is what your brain wants you to see.</div>
+  </div>
+  <div class="core-glow" id="coreGlow"></div>
+  
+  <div class="upgrade-panel" id="upgradePanel"></div>
+</div>
+<div class="fade" id="fade"></div>
 
 <script>
-  const $ = id => document.getElementById(id);
-  const store = {
-    load() { try { return JSON.parse(localStorage.getItem('porimap_v2')) || {}; } catch(e){ return {}; } },
-    save(d) { try { localStorage.setItem('porimap_v2', JSON.stringify(d)); } catch(e){} }
-  };
-  let data = Object.assign({ rate:'', theme:'light', hist:[] }, store.load());
+const { Engine, Bodies, Body, Composite, Events, Vector } = Matter;
 
-  const SUN = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/></svg>';
-  const MOON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A8 8 0 0 1 10.5 4 8 8 0 1 0 20 13.5z"/></svg>';
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr = 1;
 
-  function applyTheme(){
-    document.documentElement.classList.toggle('dark', data.theme === 'dark');
-    $('themeBtn').innerHTML = data.theme === 'dark' ? MOON : SUN;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  
+  // 横屏检测
+  const tip = document.getElementById('orientTip');
+  if (W < H) {
+    tip.classList.add('show');
+  } else {
+    tip.classList.remove('show');
   }
-  $('themeBtn').onclick = () => {
-    data.theme = data.theme === 'dark' ? 'light' : 'dark';
-    store.save(data); applyTheme();
-  };
-  applyTheme();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+resize();
 
-  if (data.rate !== '') $('rate').value = data.rate;
-  $('rate').addEventListener('input', e => { data.rate = e.target.value; store.save(data); });
+const engine = Engine.create({ gravity: { x: 0, y: 0.32 } });
+const world = engine.world;
 
-  function toast(msg){
-    const t = $('toast'); t.textContent = msg; t.style.display = 'block';
-    clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 1800);
+let gameState = 'menu';
+let playerBody = null;
+let playerAngle = 0;
+let enemies = [];
+let projectiles = [];
+let particles = [];
+let walls = [];
+let room = 1, fragments = 0, hp = 100, invincible = 0, skillCooldown = 0;
+let selectedKnowledge = [];
+let currentBoss = null;
+let joystick = { active: false, dx: 0, dy: 0 };
+let shootHeld = false;
+
+const knowledgePool = [
+  { id: 'resonance', name: '共振脉冲', desc: '释放与敌人频率匹配的冲击波，造成范围伤害。' },
+  { id: 'chaos', name: '混沌扰动', desc: '微小扰动被放大，敌人轨迹变得混乱并互相碰撞。' },
+  { id: 'gravity', name: '重力井', desc: '在前方制造短暂重力异常，吸引周围敌人。' },
+  { id: 'momentum', name: '动量守恒', desc: '下一次攻击附带强大动量，可将敌人高速弹飞。' },
+  { id: 'emergence', name: '涌现守护', desc: '召唤小型粒子形成自组织护盾。' },
+  { id: 'scale', name: '尺度之外', desc: '短暂改变自身尺度，可穿越或撞击更大目标。' }
+];
+
+const bosses = [
+  { id: 'illusion', title: '错觉 · 大脑在骗你', eng: 'ILLUSIONS', sub: '你看到的，是大脑想让你看到的。', subEn: 'What you see is what your brain wants you to see.', hp: 300, color: '#7ec8ff' },
+  { id: 'chaos', title: '混沌 · 毫厘之学', eng: 'CHAOS', sub: '出发时只差 0.001°，九秒后它们再也回不到一起。', subEn: 'A difference of 0.001° at the start, and they never meet again.', hp: 280, color: '#ff6b6b' },
+  { id: 'resonance', title: '共振 · 万物的频率', eng: 'RESONANCE', sub: '推在这个节奏上，再小的力也能掀起巨浪。', subEn: 'Push at the right rhythm, and the smallest force becomes a wave.', hp: 290, color: '#4ecdc4' },
+  { id: 'emergence', title: '涌现 · 无人指挥', eng: 'EMERGENCE', sub: '没有指挥，却形成了谁也没设计过的秩序。', subEn: 'No conductor, yet order emerges that no one designed.', hp: 320, color: '#ffe66d' }
+];
+
+// ========== 摇杆 ==========
+const joyZone = document.getElementById('joystickZone');
+const joyStick = document.getElementById('joystickStick');
+const joyBase = document.getElementById('joystickBase');
+
+function handleJoyStart(e) {
+  e.preventDefault();
+  joystick.active = true;
+  const touch = e.touches ? e.touches[0] : e;
+  updateJoy(touch.clientX, touch.clientY);
+}
+function handleJoyMove(e) {
+  if (!joystick.active) return;
+  e.preventDefault();
+  const touch = e.touches ? e.touches[0] : e;
+  updateJoy(touch.clientX, touch.clientY);
+}
+function handleJoyEnd(e) {
+  joystick.active = false;
+  joystick.dx = 0; joystick.dy = 0;
+  joyStick.style.transform = 'translate(-50%, -50%)';
+}
+
+function updateJoy(x, y) {
+  const rect = joyZone.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  let dx = x - cx, dy = y - cy;
+  const max = 38;
+  const len = Math.hypot(dx, dy);
+  if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+  joyStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  joystick.dx = dx / max;
+  joystick.dy = dy / max;
+}
+
+joyZone.addEventListener('touchstart', handleJoyStart, { passive: false });
+joyZone.addEventListener('touchmove', handleJoyMove, { passive: false });
+joyZone.addEventListener('touchend', handleJoyEnd);
+joyZone.addEventListener('touchcancel', handleJoyEnd);
+
+// ========== 按钮 ==========
+const shootBtn = document.getElementById('shootBtn');
+const skillBtn = document.getElementById('skillBtn');
+
+shootBtn.addEventListener('touchstart', e => { e.preventDefault(); shootHeld = true; shootBtn.classList.add('active'); shoot(); }, { passive: false });
+shootBtn.addEventListener('touchend', () => { shootHeld = false; shootBtn.classList.remove('active'); });
+shootBtn.addEventListener('touchcancel', () => { shootHeld = false; shootBtn.classList.remove('active'); });
+
+skillBtn.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (skillCooldown <= 0 && (gameState === 'run' || gameState === 'boss')) {
+    useSkill();
+    skillBtn.classList.add('active');
+    setTimeout(() => skillBtn.classList.remove('active'), 200);
   }
+}, { passive: false });
 
-  function renderHist(){
-    const ul = $('hist'); ul.innerHTML = '';
-    $('histCount').textContent = data.hist.length ? data.hist.length + ' entries' : '';
-    if (!data.hist.length) { ul.innerHTML = '<li class="empty">Nothing calculated yet</li>'; return; }
-    data.hist.forEach(h => {
-      const li = document.createElement('li');
-      li.innerHTML = `<span>${h.weight} g · ৳${h.rate} / kg</span><b>৳${h.total}</b>`;
-      ul.appendChild(li);
+// 桌面兼容
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && skillCooldown <= 0) useSkill();
+});
+document.addEventListener('mousedown', e => {
+  if (e.button === 0 && (gameState === 'run' || gameState === 'boss')) shoot();
+});
+
+// ========== 游戏逻辑 ==========
+function createWalls() {
+  Composite.remove(world, walls);
+  const t = 40;
+  walls = [
+    Bodies.rectangle(W/2, -t/2, W+100, t, { isStatic: true, label: 'wall' }),
+    Bodies.rectangle(W/2, H+t/2, W+100, t, { isStatic: true, label: 'wall' }),
+    Bodies.rectangle(-t/2, H/2, t, H+100, { isStatic: true, label: 'wall' }),
+    Bodies.rectangle(W+t/2, H/2, t, H+100, { isStatic: true, label: 'wall' })
+  ];
+  Composite.add(world, walls);
+}
+
+function createPlayer() {
+  if (playerBody) Composite.remove(world, playerBody);
+  playerBody = Bodies.circle(W/2, H/2, 13, {
+    frictionAir: 0.09, restitution: 0.35, density: 0.004, label: 'player'
+  });
+  Composite.add(world, playerBody);
+}
+
+function spawnEnemy(type, x, y) {
+  let r = 15, hpVal = 30, color = '#a8dadc';
+  if (type === 'chaos') { r = 15; hpVal = 38; color = '#ff6b6b'; }
+  else if (type === 'resonant') { r = 17; hpVal = 48; color = '#4ecdc4'; }
+  else if (type === 'swarm') { r = 10; hpVal = 16; color = '#ffe66d'; }
+  
+  const body = Bodies.circle(x, y, r, {
+    frictionAir: 0.04, restitution: 0.55, density: 0.003, label: 'enemy'
+  });
+  body.gameData = { type, hp: hpVal, maxHp: hpVal, color, phase: Math.random()*6 };
+  Composite.add(world, body);
+  enemies.push(body);
+}
+
+function spawnRoomEnemies() {
+  enemies.forEach(e => Composite.remove(world, e));
+  enemies = [];
+  const count = 3 + Math.min(6, Math.floor(room * 1.1));
+  for (let i = 0; i < count; i++) {
+    const types = ['normal', 'chaos', 'resonant', 'swarm'];
+    const t = types[Math.floor(Math.random() * Math.min(types.length, 1 + Math.floor(room/2)))];
+    const ang = Math.random() * Math.PI * 2;
+    const dist = 160 + Math.random() * 180;
+    spawnEnemy(t, W/2 + Math.cos(ang)*dist, H/2 + Math.sin(ang)*dist);
+  }
+}
+
+function startBoss(idx) {
+  gameState = 'bossIntro';
+  currentBoss = { ...bosses[idx % bosses.length], body: null, hp: bosses[idx % bosses.length].hp, maxHp: bosses[idx % bosses.length].hp };
+  
+  document.getElementById('cineH1').textContent = currentBoss.title;
+  document.getElementById('cineEng').textContent = currentBoss.eng;
+  document.getElementById('cineSub').textContent = currentBoss.sub;
+  document.getElementById('cineSubEn').textContent = currentBoss.subEn;
+  document.getElementById('cineTitle').classList.add('show');
+  document.getElementById('coreGlow').classList.add('show');
+  
+  setTimeout(() => {
+    document.getElementById('cineTitle').classList.remove('show');
+    document.getElementById('coreGlow').classList.remove('show');
+    gameState = 'boss';
+    const b = Bodies.circle(W/2, H*0.32, 38, {
+      frictionAir: 0.025, restitution: 0.2, density: 0.018, label: 'boss'
+    });
+    b.gameData = currentBoss;
+    currentBoss.body = b;
+    Composite.add(world, b);
+    enemies = [b];
+  }, 3000);
+}
+
+function showUpgrade() {
+  gameState = 'upgrade';
+  const panel = document.getElementById('upgradePanel');
+  panel.innerHTML = '<div style="font-size:1.15rem;letter-spacing:0.12em;margin-bottom:0.8rem;opacity:0.85;">选择一种物理知识</div>';
+  
+  const available = knowledgePool.filter(k => !selectedKnowledge.includes(k.id));
+  const choices = [];
+  while (choices.length < 3 && available.length) {
+    const i = Math.floor(Math.random() * available.length);
+    choices.push(available.splice(i, 1)[0]);
+  }
+  
+  choices.forEach(k => {
+    const card = document.createElement('div');
+    card.className = 'upgrade-card';
+    card.innerHTML = `<h3>\( {k.name}</h3><p> \){k.desc}</p>`;
+    card.onclick = () => {
+      selectedKnowledge.push(k.id);
+      panel.classList.remove('show');
+      nextRoom();
+    };
+    panel.appendChild(card);
+  });
+  panel.classList.add('show');
+}
+
+function nextRoom() {
+  room++;
+  document.getElementById('room').textContent = room;
+  createWalls();
+  createPlayer();
+  if (room % 4 === 0) startBoss(Math.floor(room/4)-1);
+  else {
+    gameState = 'run';
+    spawnRoomEnemies();
+  }
+}
+
+function shoot() {
+  if (!playerBody || (gameState !== 'run' && gameState !== 'boss')) return;
+  const speed = 11;
+  const bullet = Bodies.circle(
+    playerBody.position.x + Math.cos(playerAngle)*20,
+    playerBody.position.y + Math.sin(playerAngle)*20,
+    4.5,
+    { frictionAir: 0.01, density: 0.001, label: 'bullet' }
+  );
+  Body.setVelocity(bullet, { x: Math.cos(playerAngle)*speed, y: Math.sin(playerAngle)*speed });
+  bullet.life = 80;
+  bullet.damage = 11 + selectedKnowledge.length * 2;
+  Composite.add(world, bullet);
+  projectiles.push(bullet);
+}
+
+function useSkill() {
+  if (!playerBody || selectedKnowledge.length === 0 || skillCooldown > 0) return;
+  skillCooldown = 160;
+  const skill = selectedKnowledge[Math.floor(Math.random()*selectedKnowledge.length)];
+  
+  if (skill === 'resonance') {
+    for (let i=0; i<20; i++) {
+      const a = (i/20)*Math.PI*2;
+      const p = Bodies.circle(playerBody.position.x, playerBody.position.y, 3.5, { frictionAir: 0.02, density: 0.0004, label: 'bullet' });
+      Body.setVelocity(p, { x: Math.cos(a)*8, y: Math.sin(a)*8 });
+      p.life = 45; p.damage = 15;
+      Composite.add(world, p); projectiles.push(p);
+    }
+  } else if (skill === 'chaos') {
+    enemies.forEach(e => {
+      Body.applyForce(e, e.position, { x: (Math.random()-0.5)*0.07, y: (Math.random()-0.5)*0.07 });
+    });
+  } else if (skill === 'momentum') {
+    const p = Bodies.circle(playerBody.position.x, playerBody.position.y, 7, { density: 0.007, restitution: 0.9, label: 'bullet' });
+    Body.setVelocity(p, { x: Math.cos(playerAngle)*16, y: Math.sin(playerAngle)*16 });
+    p.life = 60; p.damage = 32;
+    Composite.add(world, p); projectiles.push(p);
+  } else if (skill === 'gravity') {
+    const well = Bodies.circle(
+      playerBody.position.x + Math.cos(playerAngle)*100,
+      playerBody.position.y + Math.sin(playerAngle)*100,
+      10, { isStatic: true, isSensor: true, label: 'well' }
+    );
+    well.timer = 80;
+    Composite.add(world, well);
+    setTimeout(() => Composite.remove(world, well), 1400);
+  }
+}
+
+// 碰撞
+Events.on(engine, 'collisionStart', e => {
+  e.pairs.forEach(pair => {
+    let bullet = null, target = null;
+    if (pair.bodyA.label === 'bullet' && (pair.bodyB.label === 'enemy' || pair.bodyB.label === 'boss')) {
+      bullet = pair.bodyA; target = pair.bodyB;
+    } else if (pair.bodyB.label === 'bullet' && (pair.bodyA.label === 'enemy' || pair.bodyA.label === 'boss')) {
+      bullet = pair.bodyB; target = pair.bodyA;
+    }
+    if (bullet && target && target.gameData) {
+      target.gameData.hp -= bullet.damage || 10;
+      for (let i=0;i<5;i++) {
+        particles.push({
+          x: target.position.x, y: target.position.y,
+          vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5,
+          life: 25, color: target.gameData.color
+        });
+      }
+      if (target.gameData.hp <= 0) {
+        if (target.label === 'boss') {
+          Composite.remove(world, target); enemies = [];
+          fragments += 5;
+          document.getElementById('frag').textContent = fragments;
+          setTimeout(showUpgrade, 700);
+        } else {
+          Composite.remove(world, target);
+          enemies = enemies.filter(en => en !== target);
+          fragments++;
+          document.getElementById('frag').textContent = fragments;
+          if (enemies.length === 0 && gameState === 'run') setTimeout(showUpgrade, 500);
+        }
+      }
+      Composite.remove(world, bullet);
+      projectiles = projectiles.filter(p => p !== bullet);
+    }
+    
+    // 玩家受伤
+    if ((pair.bodyA.label === 'player' && (pair.bodyB.label === 'enemy' || pair.bodyB.label === 'boss')) ||
+        (pair.bodyB.label === 'player' && (pair.bodyA.label === 'enemy' || pair.bodyA.label === 'boss'))) {
+      if (invincible <= 0) {
+        hp -= 11;
+        invincible = 55;
+        document.getElementById('hp').textContent = Math.max(0, hp);
+        if (hp <= 0) {
+          gameState = 'dead';
+          document.getElementById('cineH1').textContent = '观测结束';
+          document.getElementById('cineEng').textContent = 'THE END';
+          document.getElementById('cineSub').textContent = '毫厘之差，已成定局。';
+          document.getElementById('cineSubEn').textContent = 'A difference of a millimeter decided everything.';
+          document.getElementById('cineTitle').classList.add('show');
+        }
+      }
+    }
+  });
+});
+
+function updatePlayer() {
+  if (!playerBody || gameState === 'bossIntro' || gameState === 'upgrade' || gameState === 'dead') return;
+  
+  const force = 0.0028;
+  if (joystick.active) {
+    Body.applyForce(playerBody, playerBody.position, {
+      x: joystick.dx * force,
+      y: joystick.dy * force
     });
   }
-  renderHist();
-
-  let lastTotal = '';
-  function calculate(){
-    const rate = parseFloat($('rate').value);
-    const weight = parseFloat($('weight').value);
-    if (!(rate > 0) || !(weight > 0)) { toast('Enter a valid rate and weight'); return; }
-
-    const total = Math.round((rate / 1000) * weight * 100) / 100;   // per-kg rate → gram weight
-    const taka = Math.floor(total);
-    const poisha = Math.round((total - taka) * 100);                // fraction of 1 taka
-    lastTotal = total.toFixed(2);
-
-    $('priceBig').innerHTML = `৳${taka}.<small>${String(poisha).padStart(2,'0')}</small>`;
-    $('breakdown').textContent = `${taka} taka and ${poisha} poisha — .${String(poisha).padStart(2,'0')} is ${poisha}% of one taka`;
-    $('formula').textContent = `৳${rate} / kg × ${weight} g = ৳${lastTotal}`;
-    const r = $('result');
-    r.classList.remove('show'); void r.offsetWidth; r.classList.add('show');
-
-    data.hist.unshift({ rate, weight, total: lastTotal });
-    data.hist = data.hist.slice(0, 8);
-    store.save(data); renderHist();
+  
+  // 瞄准：优先朝向移动方向，否则朝向屏幕中心偏右
+  if (Math.abs(joystick.dx) > 0.15 || Math.abs(joystick.dy) > 0.15) {
+    playerAngle = Math.atan2(joystick.dy, joystick.dx);
   }
-  $('calcBtn').onclick = calculate;
+  
+  if (invincible > 0) invincible--;
+  if (skillCooldown > 0) skillCooldown--;
+  
+  // 持续射击
+  if (shootHeld && Math.random() < 0.18) shoot();
+}
 
-  // Enter: rate → weight → calculate
-  $('rate').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); $('weight').focus(); }
+function draw() {
+  ctx.fillStyle = '#030308';
+  ctx.fillRect(0, 0, W, H);
+  
+  const grd = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.65);
+  grd.addColorStop(0, 'rgba(18,28,48,0.12)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,W,H);
+  
+  if (gameState === 'menu') {
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '300 2.2rem "Noto Serif SC"';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(140,180,255,0.45)';
+    ctx.shadowBlur = 25;
+    ctx.fillText('错觉 · 物理幻境', W/2, H*0.4);
+    ctx.shadowBlur = 0;
+    ctx.font = '0.7rem Orbitron';
+    ctx.fillStyle = '#8ab4f8';
+    ctx.fillText('ILLUSION PHYSICS ROGUE', W/2, H*0.48);
+    ctx.font = '0.9rem "Noto Serif SC"';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('点击或触摸屏幕开始', W/2, H*0.62);
+    return;
+  }
+  
+  if (playerBody && gameState !== 'bossIntro') {
+    const p = playerBody.position;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 13, 0, Math.PI*2);
+    ctx.fillStyle = invincible > 0 && Math.floor(invincible/3)%2 ? 'rgba(255,180,180,0.5)' : '#e0f0ff';
+    ctx.shadowColor = '#7ec8ff';
+    ctx.shadowBlur = 16;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + Math.cos(playerAngle)*36, p.y + Math.sin(playerAngle)*36);
+    ctx.strokeStyle = 'rgba(180,220,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
+  enemies.forEach(e => {
+    if (!e.gameData) return;
+    const pos = e.position;
+    const r = e.circleRadius || 15;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI*2);
+    ctx.fillStyle = e.gameData.color;
+    ctx.shadowColor = e.gameData.color;
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    if (e.gameData.hp < e.gameData.maxHp) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(pos.x-18, pos.y-r-10, 36, 3.5);
+      ctx.fillStyle = e.gameData.color;
+      ctx.fillRect(pos.x-18, pos.y-r-10, 36*(e.gameData.hp/e.gameData.maxHp), 3.5);
+    }
   });
-  $('weight').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); calculate(); }
+  
+  projectiles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.position.x, p.position.y, p.circleRadius||4.5, 0, Math.PI*2);
+    ctx.fillStyle = '#b8e0ff';
+    ctx.fill();
   });
+  
+  particles.forEach((pt,i) => {
+    pt.x += pt.vx; pt.y += pt.vy; pt.life--;
+    ctx.globalAlpha = pt.life/25;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 2, 0, Math.PI*2);
+    ctx.fillStyle = pt.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (pt.life <= 0) particles.splice(i,1);
+  });
+  
+  if (gameState === 'boss' && currentBoss) {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(W*0.18, H-42, W*0.64, 9);
+    ctx.fillStyle = currentBoss.color;
+    ctx.fillRect(W*0.18, H-42, W*0.64*(currentBoss.hp/currentBoss.maxHp), 9);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeRect(W*0.18, H-42, W*0.64, 9);
+  }
+}
 
-  $('clearBtn').onclick = () => {
-    $('weight').value = ''; $('result').classList.remove('show');
-  };
-  $('copyBtn').onclick = () => {
-    if (!lastTotal) return;
-    const done = () => toast('Copied ৳' + lastTotal);
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText('৳' + lastTotal).then(done).catch(() => toast('৳' + lastTotal));
-    } else { toast('৳' + lastTotal); }
-  };
+function update() {
+  if (gameState === 'run' || gameState === 'boss') {
+    updatePlayer();
+    
+    projectiles = projectiles.filter(p => {
+      p.life--;
+      if (p.life <= 0) { Composite.remove(world, p); return false; }
+      return true;
+    });
+    
+    enemies.forEach(e => {
+      if (!e.gameData || !playerBody) return;
+      const dx = playerBody.position.x - e.position.x;
+      const dy = playerBody.position.y - e.position.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      
+      if (e.gameData.type === 'chaos') {
+        Body.applyForce(e, e.position, {
+          x: (Math.random()-0.5)*0.0018 + dx/dist*0.0007,
+          y: (Math.random()-0.5)*0.0018 + dy/dist*0.0007
+        });
+      } else if (e.gameData.type === 'resonant') {
+        e.gameData.phase += 0.09;
+        Body.applyForce(e, e.position, {
+          x: Math.cos(e.gameData.phase)*0.0012 + dx/dist*0.0005,
+          y: Math.sin(e.gameData.phase)*0.0012 + dy/dist*0.0005
+        });
+      } else {
+        Body.applyForce(e, e.position, { x: dx/dist*0.001, y: dy/dist*0.001 });
+      }
+    });
+  }
+  
+  Engine.update(engine, 1000/60);
+  draw();
+  requestAnimationFrame(update);
+}
+
+function startGame() {
+  document.getElementById('fade').classList.add('hide');
+  gameState = 'run';
+  room = 1; hp = 100; fragments = 0; selectedKnowledge = [];
+  document.getElementById('hp').textContent = hp;
+  document.getElementById('frag').textContent = fragments;
+  document.getElementById('room').textContent = room;
+  createWalls();
+  createPlayer();
+  spawnRoomEnemies();
+}
+
+document.body.addEventListener('click', () => {
+  if (gameState === 'menu') startGame();
+  if (gameState === 'dead') location.reload();
+});
+document.body.addEventListener('touchstart', e => {
+  if (gameState === 'menu') { e.preventDefault(); startGame(); }
+  if (gameState === 'dead') location.reload();
+}, { passive: false });
+
+createWalls();
+update();
+document.getElementById('fade').classList.add('hide');
 </script>
 </body>
 </html>
